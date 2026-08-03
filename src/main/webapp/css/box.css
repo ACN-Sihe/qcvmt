@@ -1,0 +1,75 @@
+ 
+        table {
+            border-collapse: collapse;
+            border-spacing: 0;
+        }
+
+        img {
+            -ms-interpolation-mode: bicubic;
+        }
+
+        textarea {
+            resize: vertical;
+        }
+
+        .left {
+            float: left;
+        }
+
+        .right {
+            float: right;
+        }
+
+        .overflow {
+            overflow: hidden;
+        }
+
+        .hide {
+            display: none;
+        }
+
+        .block {
+            display: block;
+        }
+
+        .inline {
+            display: inline;
+        }
+
+        .error {
+            color: #F00;
+            font-size: 12px;
+        }
+
+        label, button {
+            cursor: pointer;
+        }
+        #headerInfo {
+           
+            font-size:16px;
+            font-family:Times New Roman;
+			color:white;
+            text-align:center;
+          
+        }
+        .d1_head{
+				font-size:25px;
+				color:white;
+				font-family:Times New Roman;
+				border:0px;
+			}
+        	.d1_d{
+				font-size:25px;
+				color:white;
+				font-family:Times New Roman;
+				text-align:left;
+				border:0px;
+			}
+			.log_d{
+				background-color:blue;
+				margin:0;
+				border:0px;
+				vertical-align: top;
+				text-align:top;
+			}
+		
