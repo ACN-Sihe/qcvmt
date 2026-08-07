@@ -1,0 +1,52 @@
+spring:
+  application:
+    name: qcvmt
+  profiles:
+    active: sit
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_URL:https://keycloak-sit.modernterminals.com}/realms/${KEYCLOAK_REALM:qcvmt}
+          jwk-set-uri: ${KEYCLOAK_URL:https://keycloak-sit.modernterminals.com}/realms/${KEYCLOAK_REALM:qcvmt}/protocol/openid-connect/certs
+
+server:
+  port: 8080
+
+qcvmt:
+  cors:
+    allowed-origins: ${CORS_ORIGINS:http://localhost:5173,http://localhost:3000}
+    allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+    allowed-headers: "*"
+    max-age: 3600
+  datasource:
+    mysql:
+      url: jdbc:mysql://${MYSQL_HOST:non-prod-rds-mysql-db-for-ekstest-cluster.cj7y9snbirb5.ap-east-1.rds.amazonaws.com}:${MYSQL_PORT:3306}/${MYSQL_DB:sit_mtp}?useSSL=false&serverTimezone=Asia/Shanghai
+      username: ${MYSQL_USER:sit_mtpusr}
+      password: ${MYSQL_PASSWORD:mtp123#SIT}
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      hikari:
+        maximum-pool-size: 40
+        minimum-idle: 10
+        idle-timeout: 600000
+        connection-timeout: 10000
+    n4:
+      url: jdbc:oracle:thin:@${N4_HOST:172.23.2.5}:${N4_PORT:1661}/${N4_SERVICE:mqcvmtsit.hkg.corp.modernterminals.com}
+      username: ${N4_USER:mqcvmtapp}
+      password: ${N4_PASSWORD:mqcvmtappsit}
+      driver-class-name: oracle.jdbc.OracleDriver
+      hikari:
+        maximum-pool-size: 50
+        minimum-idle: 10
+        read-only: true
+  keycloak:
+    server-url: ${KEYCLOAK_URL:https://keycloak-sit.modernterminals.com}
+    realm: ${KEYCLOAK_REALM:qcvmt}
+    client-id: ${KEYCLOAK_CLIENT_ID:qcvmt-admin-api}
+    client-secret: ${KEYCLOAK_CLIENT_SECRET:mw8y6ZbGpHfixda3D6ET3T4vcMAGFYJz}
+  n4:
+    company: ${N4_COMPANY:MTL}
+    retry-max-attempts: 3
+    retry-interval: 500
+    connection-timeout: 10000
+    read-timeout: 30000

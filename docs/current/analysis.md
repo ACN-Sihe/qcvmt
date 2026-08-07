@@ -347,7 +347,7 @@ sequenceDiagram
 | entity/User.java | entity/User.java | @Table(name="t_user"), @Id @GeneratedValue(IDENTITY), 移除 password，新增 keycloak_id |
 | entity/Vessel.java | entity/Vessel.java | @Table(name="t_vessel"), @UniqueConstraint(vesselid, deck_hold, bay) |
 | entity/ColSet.java | entity/ColSet.java | @Table(name="t_col_set"), @Column(unique=true) for boxcase |
-| entity/CellMatrix.java | entity/CellMatrix.java | @Table(name="t_cell_matrix"), row/tier 列名保留 |
+| entity/CellMatrix.java | entity/CellMatrix.java | @Table(name="t_cell_matrix"), row 列名保留但需转义 |
 | entity/ShowLog.java | entity/ShowLog.java | @Table(name="t_showlog"), loginTime → LocalDateTime |
 | entity/OperationLog.java | entity/OperationLog.java | @Table(name="t_operation_log"), timestamp → LocalDateTime |
 | entity/VesselCol.java | entity/VesselCol.java | @Table(name="t_vessel_col") |
