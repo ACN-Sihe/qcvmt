@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS t_vessel_refuel (
 CREATE TABLE IF NOT EXISTS t_cell_matrix (
     id INT AUTO_INCREMENT PRIMARY KEY,
     type VARCHAR(10),
-    row VARCHAR(10),
+    `row` VARCHAR(10),
     tier VARCHAR(10),
     tier_start VARCHAR(10),
     tier_end VARCHAR(10),

@@ -1,0 +1,89 @@
+{
+  "id": "qcvmt",
+  "realm": "qcvmt",
+  "displayName": "QCVMT",
+  "enabled": true,
+  "registrationAllowed": false,
+  "registrationEmailAsUsername": false,
+  "rememberMe": false,
+  "verifyEmail": false,
+  "loginWithEmailAllowed": false,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": false,
+  "roles": {
+    "realm": [
+      {
+        "name": "qcvmt-admin",
+        "description": "QCVMT administrator role"
+      },
+      {
+        "name": "qcvmt-user",
+        "description": "QCVMT standard user role"
+      }
+    ]
+  },
+  "defaultDefaultClientScopes": [
+    "web-origins",
+    "roles",
+    "profile",
+    "email"
+  ],
+  "defaultOptionalClientScopes": [
+    "address",
+    "phone",
+    "offline_access",
+    "microprofile-jwt"
+  ],
+  "clients": [
+    {
+      "clientId": "qcvmt-admin-api",
+      "name": "QCVMT Admin API",
+      "description": "Confidential client used by the Spring Boot backend for Keycloak Admin API access.",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "bearerOnly": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "frontchannelLogout": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "CHANGE_ME_QCVMT_ADMIN_API_SECRET",
+      "redirectUris": [],
+      "webOrigins": [],
+      "defaultClientScopes": [
+        "web-origins",
+        "roles",
+        "profile",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access",
+        "microprofile-jwt"
+      ],
+      "attributes": {
+        "client.secret.creation.time": "1786060800"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "service-account-qcvmt-admin-api",
+      "enabled": true,
+      "serviceAccountClientId": "qcvmt-admin-api",
+      "clientRoles": {
+        "realm-management": [
+          "manage-users",
+          "view-users",
+          "query-users",
+          "view-realm"
+        ]
+      }
+    }
+  ]
+}

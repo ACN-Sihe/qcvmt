@@ -440,7 +440,7 @@ CREATE TABLE t_vessel_refuel (
 CREATE TABLE t_cell_matrix (
     id INT AUTO_INCREMENT PRIMARY KEY,
     type VARCHAR(50) NOT NULL,
-    row VARCHAR(10),
+    `row` VARCHAR(10),
     tier VARCHAR(10),
     tier_start VARCHAR(10),
     tier_end VARCHAR(10),

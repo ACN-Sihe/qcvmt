@@ -21,9 +21,9 @@ qcvmt:
     max-age: 3600
   datasource:
     mysql:
-      url: jdbc:mysql://${MYSQL_HOST:non-prod-rds-mysql-db-for-ekstest-cluster.cj7y9snbirb5.ap-east-1.rds.amazonaws.com}:${MYSQL_PORT:3306}/${MYSQL_DB:qcvmt}?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8mb4
-      username: ${MYSQL_USER:root}
-      password: ${MYSQL_PASSWORD:}
+      url: jdbc:mysql://${MYSQL_HOST:non-prod-rds-mysql-db-for-ekstest-cluster.cj7y9snbirb5.ap-east-1.rds.amazonaws.com}:${MYSQL_PORT:3306}/${MYSQL_DB:sit_mtp}?useSSL=false&serverTimezone=Asia/Shanghai
+      username: ${MYSQL_USER:sit_mtpusr}
+      password: ${MYSQL_PASSWORD:mtp123#SIT}
       driver-class-name: com.mysql.cj.jdbc.Driver
       hikari:
         maximum-pool-size: 40
@@ -43,7 +43,7 @@ qcvmt:
     server-url: ${KEYCLOAK_URL:https://keycloak-sit.modernterminals.com}
     realm: ${KEYCLOAK_REALM:qcvmt}
     client-id: ${KEYCLOAK_CLIENT_ID:qcvmt-admin-api}
-    client-secret: ${KEYCLOAK_CLIENT_SECRET:}
+    client-secret: ${KEYCLOAK_CLIENT_SECRET:mw8y6ZbGpHfixda3D6ET3T4vcMAGFYJz}
   n4:
     company: ${N4_COMPANY:MTL}
     retry-max-attempts: 3
