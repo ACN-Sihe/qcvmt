@@ -31,9 +31,9 @@ qcvmt:
         idle-timeout: 600000
         connection-timeout: 10000
     n4:
-      url: jdbc:oracle:thin:@${N4_HOST:172.23.2.5}:${N4_PORT:1661}/${N4_SERVICE:mqcvmtsit.hkg.corp.modernterminals.com}
-      username: ${N4_USER:mqcvmtapp}
-      password: ${N4_PASSWORD:mqcvmtappsit}
+      url: jdbc:oracle:thin:@${N4_HOST:172.23.2.5}:${N4_PORT:1661}/${N4_SERVICE:mn4osit.hkg.corp.modernterminals.com}
+      username: ${N4_USER:sup_acn0}
+      password: ${N4_PASSWORD:testsup}
       driver-class-name: oracle.jdbc.OracleDriver
       hikari:
         maximum-pool-size: 50
