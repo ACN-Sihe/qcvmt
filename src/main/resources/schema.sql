@@ -1,3 +1,10 @@
+----------- create schema and account -----------
+create database qcvmt character set utf8mb4 collate utf8mb4_unicode_ci;
+create user qcvmtapp identified by 'qcvmtapp_test' password expire never;
+grant select,insert,update,delete,create,drop,references,alter,index,CREATE TEMPORARY TABLES on qcvmt.* to 'qcvmtapp'@'%' with grant option;
+grant execute on qcvmt.* to 'qcvmtapp'@'%';
+flush privileges;
+----------- create table -----------
 CREATE TABLE IF NOT EXISTS t_user (
     id INT AUTO_INCREMENT PRIMARY KEY,
     keycloak_id VARCHAR(36) UNIQUE,
