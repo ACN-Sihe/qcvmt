@@ -3,6 +3,8 @@ package com.mtl.qcvmt.exception;
 import com.mtl.qcvmt.dto.common.ApiResponse;
 import jakarta.persistence.OptimisticLockException;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -13,6 +15,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+  private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
   @ExceptionHandler(BusinessException.class)
   public ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException ex) {
@@ -44,6 +48,7 @@ public class GlobalExceptionHandler {
 
   @ExceptionHandler(ResponseStatusException.class)
   public ResponseEntity<ApiResponse<Void>> handleResponseStatusException(ResponseStatusException ex) {
+    log.warn("Request failed with status={}, reason={}", ex.getStatusCode(), ex.getReason());
     String message = ex.getReason() == null ? "request_failed" : ex.getReason();
     return ResponseEntity.status(ex.getStatusCode())
         .body(ApiResponse.fail(message));
@@ -57,6 +62,7 @@ public class GlobalExceptionHandler {
 
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ApiResponse<Void>> handleException(Exception ex) {
+    log.error("Unhandled exception", ex);
     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
         .body(ApiResponse.fail("internal_error"));
   }

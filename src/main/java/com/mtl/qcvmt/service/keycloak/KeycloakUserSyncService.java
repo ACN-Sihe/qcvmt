@@ -10,6 +10,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class KeycloakUserSyncService {
 
+  public record SyncResult(User user, boolean created) {
+  }
+
   private final UserRepository userRepository;
   private final SecurityContextHelper securityContextHelper;
 
@@ -20,17 +23,34 @@ public class KeycloakUserSyncService {
 
   @Transactional
   public User getOrCreateLocalUser() {
+    return syncCurrentUser().user();
+  }
+
+  @Transactional
+  public SyncResult syncCurrentUser() {
     String keycloakId = securityContextHelper.getKeycloakSub();
     String username = securityContextHelper.getCurrentUsername();
+    return syncByIdentity(keycloakId, username, securityContextHelper.isAdmin());
+  }
 
+  @Transactional
+  public SyncResult syncByIdentity(String keycloakId, String username, boolean admin) {
     return userRepository.findByKeycloakId(keycloakId)
+        .map(user -> new SyncResult(user, false))
+        .or(() -> userRepository.findByUsername(username).map(user -> {
+          user.setKeycloakId(keycloakId);
+          if (user.getRole() == null || user.getRole().isBlank()) {
+            user.setRole(admin ? "ADMIN" : "USER");
+          }
+          return new SyncResult(userRepository.save(user), false);
+        }))
         .orElseGet(() -> {
           User user = new User();
           user.setKeycloakId(keycloakId);
           user.setUsername(username);
-          user.setRole(securityContextHelper.isAdmin() ? "ADMIN" : "USER");
+          user.setRole(admin ? "ADMIN" : "USER");
           user.setCreateTime(LocalDateTime.now());
-          return userRepository.save(user);
+          return new SyncResult(userRepository.save(user), true);
         });
   }
 }
