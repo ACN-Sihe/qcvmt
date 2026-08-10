@@ -44,9 +44,12 @@ public class N4ContainerQueryService {
   }
 
   public List<Map<String, Object>> getHazardList(String unitId) {
-    String sql = "SELECT hm.unno, hm.proper_name FROM " + N4TableConstants.REF_HAZARDOUS_MATERIAL + " hm "
-        + "JOIN " + N4TableConstants.INV_UNIT + " iu ON iu.goods = hm.gkey WHERE iu.id = ?";
-    return n4QueryRepository.queryForList(sql, unitId);
+    // String sql = "SELECT hm.unno, hm.proper_name FROM " +
+    // N4TableConstants.REF_HAZARDOUS_MATERIAL + " hm "
+    // + "JOIN " + N4TableConstants.INV_UNIT + " iu ON iu.goods = hm.gkey WHERE
+    // iu.id = ?";
+    // return n4QueryRepository.queryForList(sql, unitId);
+    return null;
   }
 
   public List<Map<String, Object>> getTwentyUnitList(String qcid, String vesselId, String bay) {
