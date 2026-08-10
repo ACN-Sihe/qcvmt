@@ -16,25 +16,34 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.csrf(csrf -> csrf.disable())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/actuator/health", "/v3/api-docs/**", "/swagger-ui/**").permitAll()
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/api/users/**", "/api/operation-logs/**", "/api/import/**", "/api/export/**")
-                        .hasRole("qcvmt-admin")
-                        .requestMatchers("/api/vessels/**", "/api/color-sets/**", "/api/vessel-colors/**",
-                                "/api/vessel-refuels/**", "/api/bay-config/**")
-                        .hasRole("qcvmt-admin")
-                        .requestMatchers("/api/terminal/**")
-                        .hasAnyRole("qcvmt-admin", "qcvmt-user")
-                        .anyRequest().authenticated())
-                .oauth2ResourceServer(
-                        oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(new JwtAuthConverter())))
-                .cors(Customizer.withDefaults());
+        @Bean
+        public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+                http.csrf(csrf -> csrf.disable())
+                                .sessionManagement(session -> session
+                                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                                .authorizeHttpRequests(authorize -> authorize
+                                                .requestMatchers("/actuator/health", "/v3/api-docs/**",
+                                                                "/swagger-ui/**")
+                                                .permitAll()
+                                                .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
+                                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                                                .requestMatchers("/api/users/**", "/api/operation-logs/**",
+                                                                "/api/import/**", "/api/export/**")
+                                                .hasRole("qcvmt-admin")
+                                                .requestMatchers("/api/vessels/**", "/api/color-sets/**",
+                                                                "/api/vessel-colors/**",
+                                                                "/api/vessel-refuels/**", "/api/bay-config/**")
+                                                .hasRole("qcvmt-admin")
+                                                .requestMatchers("/api/terminal/**")
+                                                .hasAnyRole("qcvmt-admin", "qcvmt-user")
+                                                .requestMatchers("/api/auth/**")
+                                                .hasAnyRole("qcvmt-admin", "qcvmt-user")
+                                                .anyRequest().authenticated())
+                                .oauth2ResourceServer(
+                                                oauth2 -> oauth2.jwt(jwt -> jwt
+                                                                .jwtAuthenticationConverter(new JwtAuthConverter())))
+                                .cors(Customizer.withDefaults());
 
-        return http.build();
-    }
+                return http.build();
+        }
 }
