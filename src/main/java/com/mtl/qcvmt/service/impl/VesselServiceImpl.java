@@ -32,6 +32,17 @@ public class VesselServiceImpl implements VesselService {
 
   @Override
   @Transactional(readOnly = true)
+  public List<VesselResponse> listByVesselId(String vesselId) {
+    if (vesselId == null || vesselId.isBlank()) {
+      return List.of();
+    }
+    return vesselRepository.findAllByVesselIdOrderByBayAscDeckHoldAsc(vesselId).stream()
+        .map(this::toResponse)
+        .toList();
+  }
+
+  @Override
+  @Transactional(readOnly = true)
   public VesselResponse get(Integer id) {
     Vessel vessel = vesselRepository.findById(id)
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Vessel not found"));

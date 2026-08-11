@@ -42,7 +42,7 @@ public class UserServiceImpl implements UserService {
   @Override
   @Transactional
   public UserResponse create(CreateUserRequest request) {
-    if (userRepository.findByUsername(request.username()).isPresent()) {
+    if (!userRepository.findAllByUsernameOrderByIdAsc(request.username()).isEmpty()) {
       throw new ResponseStatusException(HttpStatus.CONFLICT, "Username already exists");
     }
 

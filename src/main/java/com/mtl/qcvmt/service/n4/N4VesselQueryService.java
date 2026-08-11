@@ -58,7 +58,10 @@ public class N4VesselQueryService {
   }
 
   public String getVesselName(String vesselId) {
-    String sql = "SELECT vv.name FROM " + N4TableConstants.VSL_VESSELS + " vv WHERE vv.id = ?";
+    String sql = "SELECT vv.name FROM " + N4TableConstants.ARGO_CARRIER_VISIT + " acv "
+        + "JOIN " + N4TableConstants.VSL_VISIT_DETAILS + " vvd ON vvd.vvd_gkey = acv.cvcvd_gkey "
+        + "JOIN " + N4TableConstants.VSL_VESSELS + " vv ON vv.gkey = vvd.vessel_gkey "
+        + "WHERE acv.id = ? FETCH FIRST 1 ROWS ONLY";
     return n4QueryRepository.queryForObject(sql, String.class, vesselId);
   }
 

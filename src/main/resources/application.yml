@@ -50,3 +50,13 @@ qcvmt:
     retry-interval: 500
     connection-timeout: 10000
     read-timeout: 30000
+  migration:
+    enabled: ${QCVMT_MIGRATION_ENABLED:false}
+    mode: ${QCVMT_MIGRATION_MODE:EXPORT_SQL}
+    export-file: ${QCVMT_MIGRATION_EXPORT_FILE:build/migration/oracle_to_mysql_insert.sql}
+    truncate-before-load: ${QCVMT_MIGRATION_TRUNCATE:true}
+    batch-size: ${QCVMT_MIGRATION_BATCH_SIZE:500}
+    oracle:
+      url: ${QCVMT_MIGRATION_ORACLE_URL:}
+      username: ${QCVMT_MIGRATION_ORACLE_USERNAME:}
+      password: ${QCVMT_MIGRATION_ORACLE_PASSWORD:}

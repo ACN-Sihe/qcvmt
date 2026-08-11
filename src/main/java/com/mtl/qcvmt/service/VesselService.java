@@ -9,6 +9,8 @@ public interface VesselService {
 
   List<VesselResponse> list();
 
+  List<VesselResponse> listByVesselId(String vesselId);
+
   VesselResponse get(Integer id);
 
   VesselResponse create(CreateVesselRequest request);
