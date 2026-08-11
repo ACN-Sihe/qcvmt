@@ -20,9 +20,10 @@ public class N4FacilityQueryService {
 
   public List<String> queryQcId() {
     String sql = "SELECT DISTINCT xpow.name AS qcid FROM " + N4TableConstants.XPS_POINTOFWORK + " xpow "
-        + "WHERE xpow.yard IN (SELECT gkey FROM " + N4TableConstants.ARGO_YARD + " "
-        + "WHERE fcy_gkey IN (SELECT gkey FROM " + N4TableConstants.ARGO_FACILITY + " WHERE name = ?))";
-    List<Map<String, Object>> rows = n4QueryRepository.queryForList(sql, company);
+        + "JOIN " + N4TableConstants.ARGO_YARD + " ay ON ay.gkey = xpow.yard "
+        + "JOIN " + N4TableConstants.ARGO_FACILITY + " af ON af.gkey = ay.fcy_gkey "
+        + "WHERE af.name IN (?, ?)";
+    List<Map<String, Object>> rows = n4QueryRepository.queryForList(sql, "T125", "T9");
     return rows.stream().map(row -> String.valueOf(row.get("qcid"))).toList();
   }
 

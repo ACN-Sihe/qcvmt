@@ -4,10 +4,12 @@ import com.mtl.qcvmt.dto.common.ApiResponse;
 import com.mtl.qcvmt.dto.response.RobContainer;
 import com.mtl.qcvmt.dto.response.TerminalView;
 import com.mtl.qcvmt.dto.response.WorkQueueResult;
+import com.mtl.qcvmt.dto.vessel.VesselResponse;
 import com.mtl.qcvmt.entity.CellMatrix;
 import com.mtl.qcvmt.entity.SequenceVO;
 import com.mtl.qcvmt.entity.User;
 import com.mtl.qcvmt.exception.BusinessException;
+import com.mtl.qcvmt.exception.N4QueryException;
 import com.mtl.qcvmt.service.ColorSetService;
 import com.mtl.qcvmt.service.VesselService;
 import com.mtl.qcvmt.service.keycloak.KeycloakUserSyncService;
@@ -77,6 +79,7 @@ public class TerminalController {
     String vesselId = coalesce(workQueue.vesselId(), firstVesselId());
     String deckHold = coalesce(workQueue.deckHold(), firstDeckHold(workQueue.sequences()));
     String bay = coalesce(workQueue.minBay(), firstBay(workQueue.sequences()));
+    List<VesselResponse> matchedVessels = resolveTerminalVessels(vesselId);
 
     List<CellMatrix> cellMatrix = n4VesselQueryService.getCellMatrix(vesselId, bay, deckHold);
 
@@ -90,7 +93,7 @@ public class TerminalController {
     }
 
     TerminalView response = new TerminalView(
-        vesselService.list(),
+        matchedVessels,
         workQueue,
         colorSetService.list(),
         robContainers,
@@ -138,6 +141,23 @@ public class TerminalController {
 
   private String firstVesselId() {
     return vesselService.list().stream().findFirst().map(v -> v.vesselId()).orElse(null);
+  }
+
+  private List<VesselResponse> resolveTerminalVessels(String vesselId) {
+    if (vesselId == null || vesselId.isBlank()) {
+      return Collections.emptyList();
+    }
+
+    try {
+      String vesselName = n4VesselQueryService.getVesselName(vesselId);
+      List<VesselResponse> vessels = vesselService.listByVesselId(vesselName);
+      if (!vessels.isEmpty()) {
+        return vessels;
+      }
+    } catch (N4QueryException | ResponseStatusException ignored) {
+    }
+
+    return vesselService.listByVesselId(vesselId);
   }
 
   private String firstDeckHold(List<SequenceVO> sequences) {

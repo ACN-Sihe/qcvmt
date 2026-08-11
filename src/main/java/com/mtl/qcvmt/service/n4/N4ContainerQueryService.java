@@ -24,8 +24,9 @@ public class N4ContainerQueryService {
     String sql = "SELECT iufv.flex_string01 AS bay, iufv.last_pos_slot AS slot, iu.id AS container_id "
         + "FROM " + N4TableConstants.INV_UNIT_FCY_VISIT + " iufv "
         + "JOIN " + N4TableConstants.INV_UNIT + " iu ON iufv.unit_gkey = iu.gkey "
-        + "JOIN " + N4TableConstants.ARGO_CARRIER_VISIT + " acv ON iufv.facility_gkey = acv.facility_gkey "
-        + "WHERE acv.id = ? AND SUBSTR(iufv.flex_string01, 1, 2) >= ? AND iufv.departure_visit_gkey IS NULL";
+        + "JOIN " + N4TableConstants.ARGO_CARRIER_VISIT
+        + " acv ON acv.gkey IN (iufv.actual_ib_cv, iufv.actual_ob_cv, iufv.intend_ob_cv) "
+        + "WHERE acv.id = ? AND SUBSTR(iufv.flex_string01, 1, 2) >= ? AND iufv.last_pos_loctype = 'VESSEL'";
     List<Map<String, Object>> rows = n4QueryRepository.queryForList(sql, vesselId, minBay == null ? "00" : minBay);
     return rows.stream().map(this::toRobContainer).toList();
   }
@@ -37,8 +38,9 @@ public class N4ContainerQueryService {
     String sql = "SELECT iufv.flex_string01 AS bay, iufv.last_pos_slot AS slot, iu.id AS container_id "
         + "FROM " + N4TableConstants.INV_UNIT_FCY_VISIT + " iufv "
         + "JOIN " + N4TableConstants.INV_UNIT + " iu ON iufv.unit_gkey = iu.gkey "
-        + "JOIN " + N4TableConstants.ARGO_CARRIER_VISIT + " acv ON iufv.facility_gkey = acv.facility_gkey "
-        + "WHERE acv.id = ? AND iufv.flex_string01 = ? AND iufv.departure_visit_gkey IS NULL";
+        + "JOIN " + N4TableConstants.ARGO_CARRIER_VISIT
+        + " acv ON acv.gkey IN (iufv.actual_ib_cv, iufv.actual_ob_cv, iufv.intend_ob_cv) "
+        + "WHERE acv.id = ? AND iufv.flex_string01 = ? AND iufv.last_pos_loctype = 'VESSEL'";
     List<Map<String, Object>> rows = n4QueryRepository.queryForList(sql, vesselId, bay);
     return rows.stream().map(this::toRobContainer).toList();
   }
@@ -54,7 +56,10 @@ public class N4ContainerQueryService {
 
   public List<Map<String, Object>> getTwentyUnitList(String qcid, String vesselId, String bay) {
     String sql = "SELECT iu.id, iu.category FROM " + N4TableConstants.INV_UNIT + " iu "
-        + "WHERE iu.line_op = ? AND iu.cv_id = ? AND iu.last_pos_slot LIKE ?";
+        + "JOIN " + N4TableConstants.INV_UNIT_FCY_VISIT + " iufv ON iufv.unit_gkey = iu.gkey "
+        + "JOIN " + N4TableConstants.ARGO_CARRIER_VISIT
+        + " acv ON acv.gkey IN (iufv.actual_ib_cv, iufv.actual_ob_cv, iufv.intend_ob_cv) "
+        + "WHERE iu.line_op = ? AND acv.id = ? AND iufv.last_pos_slot LIKE ?";
     return n4QueryRepository.queryForList(sql, qcid, vesselId, bay + "%");
   }
 

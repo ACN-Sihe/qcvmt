@@ -53,8 +53,11 @@ public class N4WorkQueueService {
     if (qorder == null || qorder.isBlank() || qtype == null || qtype.isBlank()) {
       return Collections.emptyList();
     }
-    String sql = "SELECT iq.curr_pos_slot, iq.planned_pos_slot, iq.qtype, iq.qdeck, iq.qrow, iq.status, iq.qbay "
-        + "FROM " + N4TableConstants.INV_WQ + " iq WHERE iq.qorder = ? AND iq.qtype = ? ORDER BY iq.qrow";
+    String sql = "SELECT iw.pos_slot AS curr_pos_slot, iw.pos_slot AS planned_pos_slot, iq.qtype, iq.qdeck, iq.qrow, "
+        + "iw.move_stage AS status, CASE WHEN REGEXP_LIKE(iw.pos_slot, '^[0-9]{6}$') THEN SUBSTR(iw.pos_slot, 1, 2) END AS qbay "
+        + "FROM " + N4TableConstants.INV_WQ + " iq "
+        + "JOIN " + N4TableConstants.INV_WI + " iw ON iw.work_queue_gkey = iq.gkey "
+        + "WHERE iq.qorder = ? AND iq.qtype = ? ORDER BY iq.qrow, iw.sequence";
     List<Map<String, Object>> rows = n4QueryRepository.queryForList(sql, qorder, qtype);
     List<SequenceVO> sequences = new ArrayList<>();
     for (Map<String, Object> row : rows) {
@@ -90,8 +93,10 @@ public class N4WorkQueueService {
       return null;
     }
 
-    String sql = "SELECT MIN(iq.qbay) AS min_bay, MAX(iq.qbay) AS max_bay, MIN(iq.pos_locid) AS vessel_id, "
-        + "MIN(iq.qdeck) AS deck_hold FROM " + N4TableConstants.INV_WQ + " iq "
+    String sql = "SELECT MIN(CASE WHEN REGEXP_LIKE(iw.pos_slot, '^[0-9]{6}$') THEN SUBSTR(iw.pos_slot, 1, 2) END) AS min_bay, "
+        + "MAX(CASE WHEN REGEXP_LIKE(iw.pos_slot, '^[0-9]{6}$') THEN SUBSTR(iw.pos_slot, 1, 2) END) AS max_bay, "
+        + "MIN(iq.pos_locid) AS vessel_id, MIN(iq.qdeck) AS deck_hold FROM " + N4TableConstants.INV_WQ + " iq "
+        + "JOIN " + N4TableConstants.INV_WI + " iw ON iw.work_queue_gkey = iq.gkey "
         + "JOIN " + N4TableConstants.XPS_CRANESHIFT + " xcs ON iq.first_shift_pkey = xcs.pkey "
         + "JOIN " + N4TableConstants.XPS_POINTOFWORK + " xpow ON xcs.owner_pow = xpow.pkey "
         + "WHERE iq.qorder = ? AND iq.qtype = ? AND xpow.name = ?";
