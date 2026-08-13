@@ -123,15 +123,20 @@ public class N4WorkQueueService {
         + "iq.qtype, iq.qdeck, iq.qrow, iw.move_stage AS status, iu.is_oog, "
         + "CASE WHEN ig.temp_reqd_c IS NULL THEN '0' ELSE '1' END AS is_powered, "
         + "CASE re.iso_group WHEN 'TN' THEN '1' WHEN 'TD' THEN '1' WHEN 'TG' THEN '1' ELSE '0' END AS istank, "
-        + "CASE WHEN (iu.twin_with = 'PREV' OR iu.twin_with = 'NEXT') AND iu.twin_int_fetch = 1 "
-        + "AND (iu.is_tandem_with_next = 1 OR iu.is_tandem_with_previous = 1) THEN '1' ELSE '0' END AS isquad, "
-        + "CASE WHEN iu.twin_with = 'NONE' AND iu.twin_int_fetch = 0 "
-        + "AND (iu.is_tandem_with_next = 1 OR iu.is_tandem_with_previous = 1) THEN '1' ELSE '0' END AS istandem, "
-        + "CASE WHEN (iu.twin_with = 'PREV' OR iu.twin_with = 'NEXT') AND iu.twin_int_fetch = 1 "
-        + "AND (iu.is_tandem_with_next = 0 AND iu.is_tandem_with_previous = 0) THEN '1' ELSE '0' END AS istwin, "
-        + "CASE WHEN (iu.twin_with = 'NONE' AND iu.twin_int_fetch = 0 "
-        + "AND (iu.is_tandem_with_next = 0 AND iu.is_tandem_with_previous = 0)) "
-        + "OR iu.is_tandem_with_next IS NULL OR iu.is_tandem_with_previous IS NULL THEN '1' ELSE '0' END AS issingle "
+        // NOTE: twin_with/twin_int_fetch/is_tandem_with_next/is_tandem_with_previous are
+        // intentionally left unqualified (no table alias), matching the legacy CellDaoImpl SQL.
+        // These columns do not live on inv_unit (iu) - qualifying them with iu. causes an
+        // ORA-00904 invalid identifier error, which surfaces to the frontend as an
+        // unhandled N4QueryException -> HTTP 500.
+        + "CASE WHEN (twin_with = 'PREV' OR twin_with = 'NEXT') AND twin_int_fetch = 1 "
+        + "AND (is_tandem_with_next = 1 OR is_tandem_with_previous = 1) THEN '1' ELSE '0' END AS isquad, "
+        + "CASE WHEN twin_with = 'NONE' AND twin_int_fetch = 0 "
+        + "AND (is_tandem_with_next = 1 OR is_tandem_with_previous = 1) THEN '1' ELSE '0' END AS istandem, "
+        + "CASE WHEN (twin_with = 'PREV' OR twin_with = 'NEXT') AND twin_int_fetch = 1 "
+        + "AND (is_tandem_with_next = 0 AND is_tandem_with_previous = 0) THEN '1' ELSE '0' END AS istwin, "
+        + "CASE WHEN (twin_with = 'NONE' AND twin_int_fetch = 0 "
+        + "AND (is_tandem_with_next = 0 AND is_tandem_with_previous = 0)) "
+        + "OR is_tandem_with_next IS NULL OR is_tandem_with_previous IS NULL THEN '1' ELSE '0' END AS issingle "
         + COMMON_FROM + COMMON_WHERE
         + "AND iq.qtype = ? "
         + moveStageFilter(qtype) + " "
