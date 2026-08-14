@@ -1,6 +1,7 @@
 package com.mtl.qcvmt.controller;
 
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -65,6 +66,7 @@ class TerminalControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data.cells[0].row").value("01"))
         .andExpect(jsonPath("$.data.cells[0].tier").value("82"));
+    verify(n4VesselQueryService).getBayCells("VESSEL-1", "17", "A");
   }
 
   @Test
@@ -98,16 +100,17 @@ class TerminalControllerTest {
     SequenceVO sequence = new SequenceVO();
     sequence.setQdeck("A");
     sequence.setBay("17");
-    WorkQueueResult queue = new WorkQueueResult("LOAD", "QO-1", "V123456", "17", "19", "A", List.of(sequence));
+    WorkQueueResult queue = new WorkQueueResult("LOAD", "QO-1", "VISIT-1", "17", "19", "A", List.of(sequence));
     when(n4WorkQueueService.getCurrentWorkQueue("QC01")).thenReturn(queue);
 
+    when(n4VesselQueryService.getVesselName("VISIT-1")).thenReturn("VESSEL-1");
     when(n4VesselQueryService.getBayCells(anyString(), anyString(), anyString()))
         .thenReturn(List.of(new BayCellResponse("01", "82", "1")));
     when(n4ContainerQueryService.getROBList(anyString(), anyString())).thenReturn(List.of());
     when(n4ContainerQueryService.getROBListByBay(anyString(), anyString())).thenReturn(List.of());
 
-    when(vesselService.list())
-        .thenReturn(List.of(new VesselResponse(1, "V123456", "A", "17", "01", "19", "82", "90", 0)));
+    when(vesselService.listByVesselId("VESSEL-1"))
+        .thenReturn(List.of(new VesselResponse(1, "VESSEL-1", "A", "17", "01", "19", "82", "90", 0)));
     when(colorSetService.list())
         .thenReturn(List.of(new ColorSetResponse(1, "EMPTY", "white", 0)));
   }

@@ -80,8 +80,12 @@ public class TerminalController {
     String deckHold = coalesce(workQueue.deckHold(), firstDeckHold(workQueue.sequences()));
     String bay = coalesce(workQueue.minBay(), firstBay(workQueue.sequences()));
     List<VesselResponse> matchedVessels = resolveTerminalVessels(vesselId);
+    String layoutVesselId = matchedVessels.stream()
+        .findFirst()
+        .map(VesselResponse::vesselId)
+        .orElse(vesselId);
 
-    List<BayCellResponse> cells = n4VesselQueryService.getBayCells(vesselId, bay, deckHold);
+    List<BayCellResponse> cells = n4VesselQueryService.getBayCells(layoutVesselId, bay, deckHold);
 
     List<RobContainer> robContainers = n4ContainerQueryService.getROBList(vesselId, bay);
     if (robContainers.isEmpty() && workQueue.maxBay() != null) {
