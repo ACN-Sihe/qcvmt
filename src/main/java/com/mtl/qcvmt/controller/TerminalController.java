@@ -1,11 +1,11 @@
 package com.mtl.qcvmt.controller;
 
 import com.mtl.qcvmt.dto.common.ApiResponse;
+import com.mtl.qcvmt.dto.response.BayCellResponse;
 import com.mtl.qcvmt.dto.response.RobContainer;
 import com.mtl.qcvmt.dto.response.TerminalView;
 import com.mtl.qcvmt.dto.response.WorkQueueResult;
 import com.mtl.qcvmt.dto.vessel.VesselResponse;
-import com.mtl.qcvmt.entity.CellMatrix;
 import com.mtl.qcvmt.entity.SequenceVO;
 import com.mtl.qcvmt.entity.User;
 import com.mtl.qcvmt.exception.BusinessException;
@@ -81,7 +81,7 @@ public class TerminalController {
     String bay = coalesce(workQueue.minBay(), firstBay(workQueue.sequences()));
     List<VesselResponse> matchedVessels = resolveTerminalVessels(vesselId);
 
-    List<CellMatrix> cellMatrix = n4VesselQueryService.getCellMatrix(vesselId, bay, deckHold);
+    List<BayCellResponse> cells = n4VesselQueryService.getBayCells(vesselId, bay, deckHold);
 
     List<RobContainer> robContainers = n4ContainerQueryService.getROBList(vesselId, bay);
     if (robContainers.isEmpty() && workQueue.maxBay() != null) {
@@ -97,7 +97,7 @@ public class TerminalController {
         workQueue,
         colorSetService.list(),
         robContainers,
-        cellMatrix,
+        cells,
         vesselId,
         coalesce(bay, workQueue.maxBay()),
         coalesce(deckHold, "A"),

@@ -1,5 +1,6 @@
 package com.mtl.qcvmt.service.n4;
 
+import com.mtl.qcvmt.dto.response.BayCellResponse;
 import com.mtl.qcvmt.entity.CellMatrix;
 import com.mtl.qcvmt.entity.Vessel;
 import com.mtl.qcvmt.n4.N4QueryRepository;
@@ -27,13 +28,16 @@ public class N4VesselQueryService {
     this.vesselRepository = vesselRepository;
   }
 
-  public List<CellMatrix> getCellMatrix(String vesselId, String bay, String qdeck) {
+  public List<BayCellResponse> getBayCells(String vesselId, String bay, String qdeck) {
+    String effectiveDeck = qdeck == null || qdeck.isBlank() ? "A" : qdeck;
     if (qdeck == null || qdeck.isBlank()) {
-      return cellMatrixRepository.findByTypeAndActiveOrderByIdDesc("A", "1");
+      return expandDefaultMatrix(
+          cellMatrixRepository.findByTypeAndActiveOrderByIdDesc(effectiveDeck, "1"), effectiveDeck);
     }
 
     if (vesselId == null || vesselId.isBlank() || bay == null || bay.isBlank()) {
-      return cellMatrixRepository.findByTypeAndActiveOrderByIdDesc(qdeck, "1");
+      return expandDefaultMatrix(
+          cellMatrixRepository.findByTypeAndActiveOrderByIdDesc(effectiveDeck, "1"), effectiveDeck);
     }
 
     // NOTE: t_vessel is our own local bay/tier layout table (see Vessel entity),
@@ -46,20 +50,82 @@ public class N4VesselQueryService {
     // vessel+bay+deck is used.
     Optional<Vessel> vessel = vesselRepository.findByVesselIdAndDeckHoldAndBay(vesselId, qdeck, bay);
     if (vessel.isEmpty()) {
-      return cellMatrixRepository.findByTypeAndActiveOrderByIdDesc(qdeck, "1");
+      return expandDefaultMatrix(
+          cellMatrixRepository.findByTypeAndActiveOrderByIdDesc(effectiveDeck, "1"), effectiveDeck);
     }
 
     Vessel v = vessel.get();
-    List<CellMatrix> matrix = new ArrayList<>();
-    CellMatrix cell = new CellMatrix();
-    cell.setType(qdeck);
-    cell.setRow(v.getRowStart());
-    cell.setTier(v.getTierStart());
-    cell.setTierStart(v.getTierStart());
-    cell.setTierEnd(v.getTierEnd());
-    cell.setActive("1");
-    matrix.add(cell);
-    return matrix;
+    return expandRange(v.getRowStart(), v.getRowEnd(), v.getTierStart(), v.getTierEnd(), "1");
+  }
+
+  private List<BayCellResponse> expandDefaultMatrix(List<CellMatrix> matrix, String deckHold) {
+    List<BayCellResponse> cells = new ArrayList<>();
+    for (CellMatrix rowConfig : matrix) {
+      Integer tierStart = parseNumber(rowConfig.getTierStart());
+      Integer tierEnd = parseNumber(rowConfig.getTierEnd());
+      if (tierStart != null && tierEnd != null) {
+        cells.addAll(expandRange(
+            rowConfig.getRow(), rowConfig.getRow(), rowConfig.getTierStart(),
+            rowConfig.getTierEnd(), rowConfig.getActive()));
+        continue;
+      }
+
+      int tierIndexEnd = requireNumber(rowConfig.getTier(), "tier");
+      for (int index = 0; index <= tierIndexEnd; index += 2) {
+        int tier = "B".equalsIgnoreCase(deckHold) ? index * 2 : 78 + index * 2;
+        cells.add(new BayCellResponse(
+            formatPosition(requireNumber(rowConfig.getRow(), "row")),
+            formatPosition(tier),
+            rowConfig.getActive()));
+      }
+    }
+    return cells;
+  }
+
+  private List<BayCellResponse> expandRange(
+      String rowStartValue,
+      String rowEndValue,
+      String tierStartValue,
+      String tierEndValue,
+      String active) {
+    int rowStart = requireNumber(rowStartValue, "rowStart");
+    int rowEnd = requireNumber(rowEndValue, "rowEnd");
+    int tierStart = requireNumber(tierStartValue, "tierStart");
+    int tierEnd = requireNumber(tierEndValue, "tierEnd");
+    if (rowStart > rowEnd || tierStart > tierEnd) {
+      throw new IllegalStateException("Bay row/tier range start must not exceed end");
+    }
+
+    List<BayCellResponse> cells = new ArrayList<>();
+    for (int row = rowStart; row <= rowEnd; row += 2) {
+      for (int tier = tierStart; tier <= tierEnd; tier += 2) {
+        cells.add(new BayCellResponse(formatPosition(row), formatPosition(tier), active));
+      }
+    }
+    return cells;
+  }
+
+  private int requireNumber(String value, String field) {
+    Integer parsed = parseNumber(value);
+    if (parsed == null) {
+      throw new IllegalStateException("Invalid bay " + field + ": " + value);
+    }
+    return parsed;
+  }
+
+  private Integer parseNumber(String value) {
+    if (value == null || value.isBlank()) {
+      return null;
+    }
+    try {
+      return Integer.valueOf(value);
+    } catch (NumberFormatException exception) {
+      return null;
+    }
+  }
+
+  private String formatPosition(int value) {
+    return String.format("%02d", value);
   }
 
   public String getVesselName(String vesselId) {

@@ -9,9 +9,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.mtl.qcvmt.controller.TerminalController;
 import com.mtl.qcvmt.controller.UserController;
 import com.mtl.qcvmt.dto.colorset.ColorSetResponse;
+import com.mtl.qcvmt.dto.response.BayCellResponse;
 import com.mtl.qcvmt.dto.response.WorkQueueResult;
 import com.mtl.qcvmt.dto.vessel.VesselResponse;
-import com.mtl.qcvmt.entity.CellMatrix;
 import com.mtl.qcvmt.entity.SequenceVO;
 import com.mtl.qcvmt.entity.User;
 import com.mtl.qcvmt.service.ColorSetService;
@@ -108,8 +108,8 @@ class SecurityConfigTest {
     WorkQueueResult queue = new WorkQueueResult("LOAD", "QO-1", "V123456", "17", "19", "A", List.of(sequence));
     when(n4WorkQueueService.getCurrentWorkQueue("QC01")).thenReturn(queue);
 
-    when(n4VesselQueryService.getCellMatrix(anyString(), anyString(), anyString()))
-        .thenReturn(List.of(new CellMatrix(1, "A", "01", "19", "82", "90", "1")));
+    when(n4VesselQueryService.getBayCells(anyString(), anyString(), anyString()))
+        .thenReturn(List.of(new BayCellResponse("01", "82", "1")));
     when(n4ContainerQueryService.getROBList(anyString(), anyString())).thenReturn(List.of());
     when(n4ContainerQueryService.getROBListByBay(anyString(), anyString())).thenReturn(List.of());
     when(vesselService.list())
