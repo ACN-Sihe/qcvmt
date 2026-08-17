@@ -1,7 +1,8 @@
 package com.mtl.qcvmt.controller;
 
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -71,6 +72,10 @@ class TerminalControllerTest {
         .andExpect(jsonPath("$.data.cells[0].row").value("01"))
         .andExpect(jsonPath("$.data.cells[0].tier").value("82"));
     verify(n4VesselQueryService).getBayCells("VESSEL-1", "17", "A");
+    verify(terminalBayPlanService).render(
+        any(), any(WorkQueueResult.class),
+        any(), any(), eq("VISIT-1"), eq("A"), eq(List.of("17", "19")));
+    verify(terminalBayPlanService).isRefueling("VISIT-1");
   }
 
   @Test

@@ -107,7 +107,7 @@ public class TerminalController {
         workQueue,
         robContainers,
         twentyContainers,
-        layoutVesselId,
+        vesselId,
         deckHold,
         participatingBays(bay, workQueue.maxBay()));
 
@@ -130,7 +130,7 @@ public class TerminalController {
         countBy(workQueue.sequences(), SequenceVO::isTwin),
         countBy(workQueue.sequences(), SequenceVO::isTandem),
         countBy(workQueue.sequences(), SequenceVO::isQuad),
-        terminalBayPlanService.isRefueling(layoutVesselId),
+        terminalBayPlanService.isRefueling(vesselId),
         queueStatus(workQueue));
 
     return ApiResponse.ok("qcid=" + effectiveQcid + "; user=" + currentUser.getUsername(), response);

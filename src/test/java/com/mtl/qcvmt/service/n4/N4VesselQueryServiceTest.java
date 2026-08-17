@@ -1,7 +1,6 @@
 package com.mtl.qcvmt.service.n4;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 import com.mtl.qcvmt.dto.response.BayCellResponse;
@@ -16,8 +15,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
 
 @ExtendWith(MockitoExtension.class)
 class N4VesselQueryServiceTest {
@@ -58,6 +55,28 @@ class N4VesselQueryServiceTest {
   }
 
   @Test
+  void matchesZeroPaddedN4BayToUnpaddedVesselConfiguration() {
+    Vessel vessel = new Vessel(1, "OOCL ASIA", "A", "1", "0", "10", "82", "88", 0);
+    when(vesselRepository.findByVesselIdAndDeckHoldAndBay("OOCL ASIA", "A", "01"))
+        .thenReturn(Optional.empty());
+    when(vesselRepository.findByVesselIdAndDeckHoldAndBay("OOCL ASIA", "A", "1"))
+        .thenReturn(Optional.of(vessel));
+    when(cellMatrixRepository.findByTypeAndRowBetweenOrderByIdDesc("A", "00", "10"))
+        .thenReturn(List.of(
+            new CellMatrix(2, "A", "01", "11", null, null, "1"),
+            new CellMatrix(1, "A", "00", "11", null, null, "1")));
+
+    N4VesselQueryService service =
+        new N4VesselQueryService(n4QueryRepository, cellMatrixRepository, vesselRepository);
+
+    assertThat(service.getBayCells("OOCL ASIA", "01", "A"))
+        .contains(
+            BayCellResponse.empty("01", "84"),
+            BayCellResponse.empty("01", "82"))
+        .doesNotContain(BayCellResponse.empty("01", "11"));
+  }
+
+  @Test
   void usesPreviousOddBayConfigurationForAnEvenWorkingBay() {
     Vessel vessel = new Vessel(1, "VESSEL-1", "A", "17", "00", "02", "82", "84", 0);
     when(vesselRepository.findByVesselIdAndDeckHoldAndBay("VESSEL-1", "A", "18"))
@@ -78,16 +97,23 @@ class N4VesselQueryServiceTest {
   }
 
   @Test
-  void rejectsMissingBayConfigurationInsteadOfReturningGenericTierCount() {
+  void fallsBackToActiveDeckMatrixWhenVesselBayConfigurationIsMissing() {
     when(vesselRepository.findByVesselIdAndDeckHoldAndBay("VESSEL-1", "A", "17"))
         .thenReturn(Optional.empty());
+    when(cellMatrixRepository.findByTypeAndActiveOrderByIdDesc("A", "1"))
+        .thenReturn(List.of(
+            new CellMatrix(3, "A", "05", "84", null, null, "1"),
+            new CellMatrix(2, "A", "03", "84", null, null, "1"),
+            new CellMatrix(1, "A", "01", "84", null, null, "1")));
 
     N4VesselQueryService service =
         new N4VesselQueryService(n4QueryRepository, cellMatrixRepository, vesselRepository);
 
-    assertThatThrownBy(() -> service.getBayCells("VESSEL-1", "17", "A"))
-        .isInstanceOfSatisfying(ResponseStatusException.class,
-            exception -> assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND))
-        .hasMessageContaining("Bay layout not found");
+    assertThat(service.getBayCells("VESSEL-1", "17", "A"))
+        .hasSize(3 * 43)
+        .contains(
+            BayCellResponse.empty("05", "84"),
+            BayCellResponse.empty("03", "42"),
+            BayCellResponse.empty("01", "00"));
   }
 }

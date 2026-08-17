@@ -8,8 +8,10 @@ import com.mtl.qcvmt.n4.N4TableConstants;
 import com.mtl.qcvmt.repository.CellMatrixRepository;
 import com.mtl.qcvmt.repository.VesselRepository;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -38,35 +40,62 @@ public class N4VesselQueryService {
           HttpStatus.BAD_REQUEST, "vesselId, bay and deckHold are required for bay layout");
     }
 
-    Vessel v = findConfiguredVessel(vesselId, qdeck, bay)
-        .orElseThrow(() -> new ResponseStatusException(
-            HttpStatus.NOT_FOUND,
-            "Bay layout not found for vessel=" + vesselId + ", bay=" + bay + ", deckHold=" + qdeck));
-    List<CellMatrix> configuredRows = cellMatrixRepository.findByTypeAndRowBetweenOrderByIdDesc(
-        qdeck, formatPosition(requireNumber(v.getRowStart(), "rowStart")),
-        formatPosition(requireNumber(v.getRowEnd(), "rowEnd")));
-    if (configuredRows.isEmpty()) {
-      throw new ResponseStatusException(
-          HttpStatus.NOT_FOUND,
-          "Bay matrix rows not found for deckHold=" + qdeck + ", rowStart=" + v.getRowStart()
-              + ", rowEnd=" + v.getRowEnd());
+    Optional<Vessel> configuredVessel = findConfiguredVessel(vesselId, qdeck, bay);
+    if (configuredVessel.isPresent()) {
+      Vessel vessel = configuredVessel.get();
+      List<CellMatrix> configuredRows = cellMatrixRepository.findByTypeAndRowBetweenOrderByIdDesc(
+          qdeck, formatPosition(requireNumber(vessel.getRowStart(), "rowStart")),
+          formatPosition(requireNumber(vessel.getRowEnd(), "rowEnd")));
+      if (!configuredRows.isEmpty()) {
+        return expandConfiguredRows(
+            configuredRows, vessel.getTierStart(), vessel.getTierEnd(), qdeck);
+      }
     }
-    return expandConfiguredRows(configuredRows, v.getTierStart(), v.getTierEnd(), qdeck);
+
+    List<CellMatrix> fallbackRows = cellMatrixRepository.findByTypeAndActiveOrderByIdDesc(qdeck, "1");
+    if (fallbackRows.isEmpty()) {
+      throw new ResponseStatusException(
+          HttpStatus.NOT_FOUND, "Bay matrix rows not found for deckHold=" + qdeck);
+    }
+    return expandConfiguredRows(fallbackRows, "0", fallbackRows.get(0).getTier(), qdeck);
   }
 
   private Optional<Vessel> findConfiguredVessel(String vesselId, String deckHold, String bay) {
-    Optional<Vessel> exact =
-        vesselRepository.findByVesselIdAndDeckHoldAndBay(vesselId, deckHold, bay);
-    if (exact.isPresent()) {
-      return exact;
+    Integer bayNumber = parseNumber(bay);
+    Optional<Vessel> currentBay = findConfiguredVessel(
+        vesselId, deckHold, bayCandidates(bay, bayNumber));
+    if (currentBay.isPresent()) {
+      return currentBay;
     }
 
-    Integer bayNumber = parseNumber(bay);
     if (bayNumber == null || bayNumber <= 0) {
       return Optional.empty();
     }
-    String previousBay = String.format("%0" + Math.max(2, bay.length()) + "d", bayNumber - 1);
-    return vesselRepository.findByVesselIdAndDeckHoldAndBay(vesselId, deckHold, previousBay);
+    int previousBayNumber = bayNumber - 1;
+    String previousBay = String.format("%0" + Math.max(2, bay.length()) + "d", previousBayNumber);
+    return findConfiguredVessel(
+        vesselId, deckHold, bayCandidates(previousBay, previousBayNumber));
+  }
+
+  private Optional<Vessel> findConfiguredVessel(
+      String vesselId, String deckHold, Set<String> bayCandidates) {
+    for (String candidate : bayCandidates) {
+      Optional<Vessel> configured =
+          vesselRepository.findByVesselIdAndDeckHoldAndBay(vesselId, deckHold, candidate);
+      if (configured.isPresent()) {
+        return configured;
+      }
+    }
+    return Optional.empty();
+  }
+
+  private Set<String> bayCandidates(String original, Integer bayNumber) {
+    Set<String> candidates = new LinkedHashSet<>();
+    candidates.add(original);
+    if (bayNumber != null) {
+      candidates.add(String.valueOf(bayNumber));
+    }
+    return candidates;
   }
 
   private List<BayCellResponse> expandConfiguredRows(
