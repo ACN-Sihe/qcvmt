@@ -120,6 +120,7 @@ public class N4WorkQueueService {
     }
 
     String sql = "SELECT iufv.last_pos_slot AS current_pos_slot, iw.pos_slot AS planned_pos_slot, "
+        + "TO_CHAR(iufv.time_move, 'yyyy-mm-dd hh24:mi:ss') AS time_move, "
         + "iq.qtype, iq.qdeck, iq.qrow, iw.move_stage AS status, iu.is_oog, "
         + "CASE WHEN ig.temp_reqd_c IS NULL THEN '0' ELSE '1' END AS is_powered, "
         + "CASE re.iso_group WHEN 'TN' THEN '1' WHEN 'TD' THEN '1' WHEN 'TG' THEN '1' ELSE '0' END AS istank, "
@@ -155,6 +156,7 @@ public class N4WorkQueueService {
       sequence.setQdeck(value(row.get("qdeck")));
       sequence.setQrow(value(row.get("qrow")));
       sequence.setStatus(value(row.get("status")));
+      sequence.setTimeMove(value(row.get("time_move")));
       sequence.setBay(currentPosSlot != null && currentPosSlot.length() >= 2 ? currentPosSlot.substring(0, 2) : null);
       sequence.setOog("1".equals(value(row.get("is_oog"))));
       sequence.setPowered("1".equals(value(row.get("is_powered"))));

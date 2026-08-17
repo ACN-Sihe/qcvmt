@@ -1,9 +1,11 @@
 package com.mtl.qcvmt.service.n4;
 
 import com.mtl.qcvmt.dto.response.BayCellResponse;
+import com.mtl.qcvmt.entity.CellMatrix;
 import com.mtl.qcvmt.entity.Vessel;
 import com.mtl.qcvmt.n4.N4QueryRepository;
 import com.mtl.qcvmt.n4.N4TableConstants;
+import com.mtl.qcvmt.repository.CellMatrixRepository;
 import com.mtl.qcvmt.repository.VesselRepository;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,12 +18,15 @@ import org.springframework.web.server.ResponseStatusException;
 public class N4VesselQueryService {
 
   private final N4QueryRepository n4QueryRepository;
+  private final CellMatrixRepository cellMatrixRepository;
   private final VesselRepository vesselRepository;
 
   public N4VesselQueryService(
       N4QueryRepository n4QueryRepository,
+      CellMatrixRepository cellMatrixRepository,
       VesselRepository vesselRepository) {
     this.n4QueryRepository = n4QueryRepository;
+    this.cellMatrixRepository = cellMatrixRepository;
     this.vesselRepository = vesselRepository;
   }
 
@@ -37,7 +42,16 @@ public class N4VesselQueryService {
         .orElseThrow(() -> new ResponseStatusException(
             HttpStatus.NOT_FOUND,
             "Bay layout not found for vessel=" + vesselId + ", bay=" + bay + ", deckHold=" + qdeck));
-    return expandRange(v.getRowStart(), v.getRowEnd(), v.getTierStart(), v.getTierEnd(), "1");
+    List<CellMatrix> configuredRows = cellMatrixRepository.findByTypeAndRowBetweenOrderByIdDesc(
+        qdeck, formatPosition(requireNumber(v.getRowStart(), "rowStart")),
+        formatPosition(requireNumber(v.getRowEnd(), "rowEnd")));
+    if (configuredRows.isEmpty()) {
+      throw new ResponseStatusException(
+          HttpStatus.NOT_FOUND,
+          "Bay matrix rows not found for deckHold=" + qdeck + ", rowStart=" + v.getRowStart()
+              + ", rowEnd=" + v.getRowEnd());
+    }
+    return expandConfiguredRows(configuredRows, v.getTierStart(), v.getTierEnd(), qdeck);
   }
 
   private Optional<Vessel> findConfiguredVessel(String vesselId, String deckHold, String bay) {
@@ -55,24 +69,26 @@ public class N4VesselQueryService {
     return vesselRepository.findByVesselIdAndDeckHoldAndBay(vesselId, deckHold, previousBay);
   }
 
-  private List<BayCellResponse> expandRange(
-      String rowStartValue,
-      String rowEndValue,
+  private List<BayCellResponse> expandConfiguredRows(
+      List<CellMatrix> configuredRows,
       String tierStartValue,
       String tierEndValue,
-      String active) {
-    int rowStart = requireNumber(rowStartValue, "rowStart");
-    int rowEnd = requireNumber(rowEndValue, "rowEnd");
+      String deckHold) {
     int tierStart = requireNumber(tierStartValue, "tierStart");
     int tierEnd = requireNumber(tierEndValue, "tierEnd");
-    if (rowStart > rowEnd || tierStart > tierEnd) {
-      throw new IllegalStateException("Bay row/tier range start must not exceed end");
+    if (tierStart > tierEnd) {
+      throw new IllegalStateException("Bay tier range start must not exceed end");
     }
 
     List<BayCellResponse> cells = new ArrayList<>();
-    for (int row = rowStart; row <= rowEnd; row += 2) {
-      for (int tier = tierStart; tier <= tierEnd; tier += 2) {
-        cells.add(new BayCellResponse(formatPosition(row), formatPosition(tier), active));
+    for (CellMatrix configuredRow : configuredRows) {
+      for (int tier = tierEnd; tier >= tierStart; tier -= 2) {
+        if ("B".equalsIgnoreCase(deckHold) && tier == 0) {
+          continue;
+        }
+        cells.add(BayCellResponse.empty(
+            formatPosition(requireNumber(configuredRow.getRow(), "row")),
+            formatPosition(tier)));
       }
     }
     return cells;

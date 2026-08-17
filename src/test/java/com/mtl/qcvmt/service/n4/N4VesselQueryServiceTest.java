@@ -5,8 +5,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 import com.mtl.qcvmt.dto.response.BayCellResponse;
+import com.mtl.qcvmt.entity.CellMatrix;
 import com.mtl.qcvmt.entity.Vessel;
 import com.mtl.qcvmt.n4.N4QueryRepository;
+import com.mtl.qcvmt.repository.CellMatrixRepository;
 import com.mtl.qcvmt.repository.VesselRepository;
 import java.util.List;
 import java.util.Optional;
@@ -23,6 +25,8 @@ class N4VesselQueryServiceTest {
   @Mock
   private N4QueryRepository n4QueryRepository;
   @Mock
+  private CellMatrixRepository cellMatrixRepository;
+  @Mock
   private VesselRepository vesselRepository;
 
   @Test
@@ -30,22 +34,27 @@ class N4VesselQueryServiceTest {
     Vessel vessel = new Vessel(1, "VESSEL-1", "A", "17", "01", "05", "82", "86", 0);
     when(vesselRepository.findByVesselIdAndDeckHoldAndBay("VESSEL-1", "A", "17"))
         .thenReturn(Optional.of(vessel));
+    when(cellMatrixRepository.findByTypeAndRowBetweenOrderByIdDesc("A", "01", "05"))
+        .thenReturn(List.of(
+            new CellMatrix(3, "A", "05", "11", null, null, "1"),
+            new CellMatrix(2, "A", "03", "11", null, null, "1"),
+            new CellMatrix(1, "A", "01", "11", null, null, "1")));
 
     N4VesselQueryService service =
-        new N4VesselQueryService(n4QueryRepository, vesselRepository);
+        new N4VesselQueryService(n4QueryRepository, cellMatrixRepository, vesselRepository);
 
     List<BayCellResponse> cells = service.getBayCells("VESSEL-1", "17", "A");
 
     assertThat(cells).containsExactly(
-        new BayCellResponse("01", "82", "1"),
-        new BayCellResponse("01", "84", "1"),
-        new BayCellResponse("01", "86", "1"),
-        new BayCellResponse("03", "82", "1"),
-        new BayCellResponse("03", "84", "1"),
-        new BayCellResponse("03", "86", "1"),
-        new BayCellResponse("05", "82", "1"),
-        new BayCellResponse("05", "84", "1"),
-        new BayCellResponse("05", "86", "1"));
+        BayCellResponse.empty("05", "86"),
+        BayCellResponse.empty("05", "84"),
+        BayCellResponse.empty("05", "82"),
+        BayCellResponse.empty("03", "86"),
+        BayCellResponse.empty("03", "84"),
+        BayCellResponse.empty("03", "82"),
+        BayCellResponse.empty("01", "86"),
+        BayCellResponse.empty("01", "84"),
+        BayCellResponse.empty("01", "82"));
   }
 
   @Test
@@ -55,13 +64,17 @@ class N4VesselQueryServiceTest {
         .thenReturn(Optional.empty());
     when(vesselRepository.findByVesselIdAndDeckHoldAndBay("VESSEL-1", "A", "17"))
         .thenReturn(Optional.of(vessel));
+    when(cellMatrixRepository.findByTypeAndRowBetweenOrderByIdDesc("A", "00", "02"))
+        .thenReturn(List.of(
+            new CellMatrix(2, "A", "02", "11", null, null, "1"),
+            new CellMatrix(1, "A", "00", "11", null, null, "1")));
 
     N4VesselQueryService service =
-        new N4VesselQueryService(n4QueryRepository, vesselRepository);
+        new N4VesselQueryService(n4QueryRepository, cellMatrixRepository, vesselRepository);
 
     assertThat(service.getBayCells("VESSEL-1", "18", "A"))
         .extracting(BayCellResponse::tier)
-        .containsExactly("82", "84", "82", "84");
+        .containsExactly("84", "82", "84", "82");
   }
 
   @Test
@@ -70,7 +83,7 @@ class N4VesselQueryServiceTest {
         .thenReturn(Optional.empty());
 
     N4VesselQueryService service =
-        new N4VesselQueryService(n4QueryRepository, vesselRepository);
+        new N4VesselQueryService(n4QueryRepository, cellMatrixRepository, vesselRepository);
 
     assertThatThrownBy(() -> service.getBayCells("VESSEL-1", "17", "A"))
         .isInstanceOfSatisfying(ResponseStatusException.class,

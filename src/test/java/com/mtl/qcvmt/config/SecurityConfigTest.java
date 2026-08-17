@@ -22,6 +22,7 @@ import com.mtl.qcvmt.service.n4.N4ContainerQueryService;
 import com.mtl.qcvmt.service.n4.N4FacilityQueryService;
 import com.mtl.qcvmt.service.n4.N4VesselQueryService;
 import com.mtl.qcvmt.service.n4.N4WorkQueueService;
+import com.mtl.qcvmt.service.n4.TerminalBayPlanService;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Disabled;
@@ -63,6 +64,8 @@ class SecurityConfigTest {
 
   @MockBean
   private N4FacilityQueryService n4FacilityQueryService;
+  @MockBean
+  private TerminalBayPlanService terminalBayPlanService;
 
   @MockBean
   private VesselService vesselService;
@@ -109,9 +112,18 @@ class SecurityConfigTest {
     when(n4WorkQueueService.getCurrentWorkQueue("QC01")).thenReturn(queue);
 
     when(n4VesselQueryService.getBayCells(anyString(), anyString(), anyString()))
-        .thenReturn(List.of(new BayCellResponse("01", "82", "1")));
-    when(n4ContainerQueryService.getROBList(anyString(), anyString())).thenReturn(List.of());
-    when(n4ContainerQueryService.getROBListByBay(anyString(), anyString())).thenReturn(List.of());
+        .thenReturn(List.of(BayCellResponse.empty("01", "82")));
+    when(n4ContainerQueryService.getROBList(anyString(), anyString(), anyString(), anyString()))
+        .thenReturn(List.of());
+    when(terminalBayPlanService.render(
+        org.mockito.ArgumentMatchers.any(),
+        org.mockito.ArgumentMatchers.any(),
+        org.mockito.ArgumentMatchers.any(),
+        org.mockito.ArgumentMatchers.any(),
+        anyString(),
+        anyString(),
+        org.mockito.ArgumentMatchers.any()))
+        .thenReturn(List.of(BayCellResponse.empty("01", "82")));
     when(vesselService.list())
         .thenReturn(List.of(new VesselResponse(1, "V123456", "A", "17", "01", "19", "82", "90", 0)));
     when(colorSetService.list())
