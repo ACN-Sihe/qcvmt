@@ -7,8 +7,8 @@ public record PageResponse<T>(
     List<T> content,
     int totalPages,
     long totalElements,
-    int currentPage,
-    int pageSize) {
+  int number,
+  int size) {
 
   public static <T> PageResponse<T> from(Page<T> page) {
     return new PageResponse<>(

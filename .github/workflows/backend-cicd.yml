@@ -1,0 +1,132 @@
+name: Backend CI/CD
+
+on:
+  pull_request:
+  push:
+    branches: [main, NEW]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-ack-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-24.04
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - name: Verify and build JAR
+        run: ./gradlew test bootJar --no-daemon
+      - name: Calculate image name
+        id: image
+        env:
+          ACR_REGISTRY: ${{ secrets.ACR_REGISTRY }}
+          ACR_NAMESPACE: ${{ vars.ACR_NAMESPACE }}
+          ACR_REPOSITORY: ${{ vars.ACR_REPOSITORY || 'qcvmt-backend' }}
+        run: |
+          for variable in ACR_REGISTRY ACR_NAMESPACE ACR_REPOSITORY; do
+            test -n "${!variable}" || { echo "Missing required $variable"; exit 1; }
+          done
+          echo "image=${ACR_REGISTRY}/${ACR_NAMESPACE}/${ACR_REPOSITORY}:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.ACR_REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.image.outputs.image }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy-ack:
+    needs: build-and-push
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-kubectl@v4
+      - name: Configure kubectl
+        env:
+          ACK_KUBECONFIG_B64: ${{ secrets.ACK_KUBECONFIG_B64 }}
+        run: |
+          test -n "$ACK_KUBECONFIG_B64" || { echo "Missing required ACK_KUBECONFIG_B64"; exit 1; }
+          echo "$ACK_KUBECONFIG_B64" | base64 --decode > "$RUNNER_TEMP/kubeconfig"
+          chmod 600 "$RUNNER_TEMP/kubeconfig"
+          echo "KUBECONFIG=$RUNNER_TEMP/kubeconfig" >> "$GITHUB_ENV"
+      - name: Apply runtime configuration and secrets
+        env:
+          ACK_NAMESPACE: ${{ vars.ACK_NAMESPACE || 'qcvmt' }}
+          APP_PROFILE: ${{ vars.APP_PROFILE || 'prod' }}
+          CORS_ORIGINS: ${{ vars.CORS_ORIGINS }}
+          MYSQL_HOST: ${{ secrets.MYSQL_HOST }}
+          MYSQL_PORT: ${{ vars.MYSQL_PORT || '3306' }}
+          MYSQL_DB: ${{ secrets.MYSQL_DB }}
+          MYSQL_USER: ${{ secrets.MYSQL_USER }}
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+          N4_HOST: ${{ secrets.N4_HOST }}
+          N4_PORT: ${{ vars.N4_PORT || '1661' }}
+          N4_SERVICE: ${{ secrets.N4_SERVICE }}
+          N4_USER: ${{ secrets.N4_USER }}
+          N4_PASSWORD: ${{ secrets.N4_PASSWORD }}
+          KEYCLOAK_URL: ${{ vars.KEYCLOAK_URL }}
+          KEYCLOAK_REALM: ${{ vars.KEYCLOAK_REALM || 'qcvmt' }}
+          KEYCLOAK_CLIENT_ID: ${{ secrets.KEYCLOAK_CLIENT_ID }}
+          KEYCLOAK_CLIENT_SECRET: ${{ secrets.KEYCLOAK_CLIENT_SECRET }}
+          ACR_REGISTRY: ${{ secrets.ACR_REGISTRY }}
+          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+        run: |
+          for variable in CORS_ORIGINS MYSQL_HOST MYSQL_DB MYSQL_USER MYSQL_PASSWORD N4_HOST N4_SERVICE N4_USER N4_PASSWORD KEYCLOAK_URL KEYCLOAK_CLIENT_ID KEYCLOAK_CLIENT_SECRET ACR_REGISTRY ACR_USERNAME ACR_PASSWORD; do
+            test -n "${!variable}" || { echo "Missing required $variable"; exit 1; }
+          done
+
+          kubectl get namespace "$ACK_NAMESPACE" >/dev/null 2>&1 || kubectl create namespace "$ACK_NAMESPACE"
+          kubectl --namespace "$ACK_NAMESPACE" create configmap qcvmt-backend-config \
+            --from-literal=SPRING_PROFILES_ACTIVE="$APP_PROFILE" \
+            --from-literal=CORS_ORIGINS="$CORS_ORIGINS" \
+            --from-literal=MYSQL_PORT="$MYSQL_PORT" \
+            --from-literal=N4_PORT="$N4_PORT" \
+            --from-literal=KEYCLOAK_URL="$KEYCLOAK_URL" \
+            --from-literal=KEYCLOAK_REALM="$KEYCLOAK_REALM" \
+            --dry-run=client -o yaml | kubectl apply -f -
+          kubectl --namespace "$ACK_NAMESPACE" create secret generic qcvmt-backend-secrets \
+            --from-literal=MYSQL_HOST="$MYSQL_HOST" \
+            --from-literal=MYSQL_DB="$MYSQL_DB" \
+            --from-literal=MYSQL_USER="$MYSQL_USER" \
+            --from-literal=MYSQL_PASSWORD="$MYSQL_PASSWORD" \
+            --from-literal=N4_HOST="$N4_HOST" \
+            --from-literal=N4_SERVICE="$N4_SERVICE" \
+            --from-literal=N4_USER="$N4_USER" \
+            --from-literal=N4_PASSWORD="$N4_PASSWORD" \
+            --from-literal=KEYCLOAK_CLIENT_ID="$KEYCLOAK_CLIENT_ID" \
+            --from-literal=KEYCLOAK_CLIENT_SECRET="$KEYCLOAK_CLIENT_SECRET" \
+            --dry-run=client -o yaml | kubectl apply -f -
+          kubectl --namespace "$ACK_NAMESPACE" create secret docker-registry acr-registry \
+            --docker-server="$ACR_REGISTRY" \
+            --docker-username="$ACR_USERNAME" \
+            --docker-password="$ACR_PASSWORD" \
+            --dry-run=client -o yaml | kubectl apply -f -
+      - name: Deploy to ACK
+        env:
+          ACK_NAMESPACE: ${{ vars.ACK_NAMESPACE || 'qcvmt' }}
+          BACKEND_IMAGE: ${{ needs.build-and-push.outputs.image }}
+        run: |
+          export BACKEND_IMAGE
+          envsubst < deploy/k8s/backend.yaml | kubectl --namespace "$ACK_NAMESPACE" apply -f -
+          kubectl --namespace "$ACK_NAMESPACE" rollout status deployment/qcvmt-backend --timeout=5m

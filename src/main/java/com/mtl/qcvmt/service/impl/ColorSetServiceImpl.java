@@ -3,10 +3,15 @@ package com.mtl.qcvmt.service.impl;
 import com.mtl.qcvmt.dto.colorset.ColorSetResponse;
 import com.mtl.qcvmt.dto.colorset.CreateColorSetRequest;
 import com.mtl.qcvmt.dto.colorset.UpdateColorSetRequest;
+import com.mtl.qcvmt.dto.common.PageResponse;
 import com.mtl.qcvmt.entity.ColorSet;
 import com.mtl.qcvmt.repository.ColorSetRepository;
 import com.mtl.qcvmt.service.ColorSetService;
 import java.util.List;
+import org.springframework.data.domain.Example;
+import org.springframework.data.domain.ExampleMatcher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -28,6 +33,15 @@ public class ColorSetServiceImpl implements ColorSetService {
     return colorSetRepository.findAll(Sort.by(Sort.Direction.ASC, "boxcase")).stream()
         .map(this::toResponse)
         .toList();
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public PageResponse<ColorSetResponse> list(Pageable pageable, String keyword) {
+    Page<ColorSet> colorSets = keyword == null || keyword.isBlank()
+        ? colorSetRepository.findAll(pageable)
+        : colorSetRepository.findAll(Example.of(colorSetSearchProbe(keyword), keywordMatcher()), pageable);
+    return PageResponse.from(colorSets.map(this::toResponse));
   }
 
   @Override
@@ -76,5 +90,18 @@ public class ColorSetServiceImpl implements ColorSetService {
         colorSet.getBoxcase(),
         colorSet.getColor(),
         colorSet.getVersion());
+  }
+
+  private ColorSet colorSetSearchProbe(String keyword) {
+    ColorSet probe = new ColorSet();
+    probe.setBoxcase(keyword);
+    probe.setColor(keyword);
+    return probe;
+  }
+
+  private ExampleMatcher keywordMatcher() {
+    return ExampleMatcher.matchingAny()
+        .withIgnoreCase()
+        .withStringMatcher(ExampleMatcher.StringMatcher.CONTAINING);
   }
 }

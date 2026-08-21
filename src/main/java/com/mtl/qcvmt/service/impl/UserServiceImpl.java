@@ -3,11 +3,16 @@ package com.mtl.qcvmt.service.impl;
 import com.mtl.qcvmt.dto.user.CreateUserRequest;
 import com.mtl.qcvmt.dto.user.UpdateUserRequest;
 import com.mtl.qcvmt.dto.user.UserResponse;
+import com.mtl.qcvmt.dto.common.PageResponse;
 import com.mtl.qcvmt.entity.User;
 import com.mtl.qcvmt.repository.UserRepository;
 import com.mtl.qcvmt.service.UserService;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.springframework.data.domain.Example;
+import org.springframework.data.domain.ExampleMatcher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -29,6 +34,15 @@ public class UserServiceImpl implements UserService {
     return userRepository.findAll(Sort.by(Sort.Direction.ASC, "username")).stream()
         .map(this::toResponse)
         .toList();
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public PageResponse<UserResponse> list(Pageable pageable, String keyword) {
+    Page<User> users = hasKeyword(keyword)
+        ? userRepository.findAll(Example.of(userSearchProbe(keyword), keywordMatcher()), pageable)
+        : userRepository.findAll(pageable);
+    return PageResponse.from(users.map(this::toResponse));
   }
 
   @Override
@@ -86,5 +100,24 @@ public class UserServiceImpl implements UserService {
         user.getRole(),
         user.getParent(),
         user.getCreateTime());
+  }
+
+  private User userSearchProbe(String keyword) {
+    User probe = new User();
+    probe.setUsername(keyword);
+    probe.setQcid(keyword);
+    probe.setRole(keyword);
+    probe.setParent(keyword);
+    return probe;
+  }
+
+  private boolean hasKeyword(String keyword) {
+    return keyword != null && !keyword.isBlank();
+  }
+
+  private ExampleMatcher keywordMatcher() {
+    return ExampleMatcher.matchingAny()
+        .withIgnoreCase()
+        .withStringMatcher(ExampleMatcher.StringMatcher.CONTAINING);
   }
 }

@@ -3,11 +3,14 @@ package com.mtl.qcvmt.service.impl;
 import com.mtl.qcvmt.dto.operationlog.CreateOperationLogRequest;
 import com.mtl.qcvmt.dto.operationlog.OperationLogResponse;
 import com.mtl.qcvmt.dto.operationlog.UpdateOperationLogRequest;
+import com.mtl.qcvmt.dto.common.PageResponse;
 import com.mtl.qcvmt.entity.OperationLog;
 import com.mtl.qcvmt.repository.OperationLogRepository;
 import com.mtl.qcvmt.service.OperationLogService;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -29,6 +32,15 @@ public class OperationLogServiceImpl implements OperationLogService {
     return operationLogRepository.findAll(Sort.by(Sort.Direction.DESC, "timestamp")).stream()
         .map(this::toResponse)
         .toList();
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public PageResponse<OperationLogResponse> list(Pageable pageable, Integer userId) {
+    Page<OperationLog> logs = userId == null
+        ? operationLogRepository.findAll(pageable)
+        : operationLogRepository.findByUserId(userId, pageable);
+    return PageResponse.from(logs.map(this::toResponse));
   }
 
   @Override

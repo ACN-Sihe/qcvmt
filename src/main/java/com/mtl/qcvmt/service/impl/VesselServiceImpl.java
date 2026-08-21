@@ -3,10 +3,15 @@ package com.mtl.qcvmt.service.impl;
 import com.mtl.qcvmt.dto.vessel.CreateVesselRequest;
 import com.mtl.qcvmt.dto.vessel.UpdateVesselRequest;
 import com.mtl.qcvmt.dto.vessel.VesselResponse;
+import com.mtl.qcvmt.dto.common.PageResponse;
 import com.mtl.qcvmt.entity.Vessel;
 import com.mtl.qcvmt.repository.VesselRepository;
 import com.mtl.qcvmt.service.VesselService;
 import java.util.List;
+import org.springframework.data.domain.Example;
+import org.springframework.data.domain.ExampleMatcher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -28,6 +33,15 @@ public class VesselServiceImpl implements VesselService {
     return vesselRepository.findAll(Sort.by(Sort.Direction.ASC, "vesselId")).stream()
         .map(this::toResponse)
         .toList();
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public PageResponse<VesselResponse> list(Pageable pageable, String keyword) {
+    Page<Vessel> vessels = keyword == null || keyword.isBlank()
+        ? vesselRepository.findAll(pageable)
+        : vesselRepository.findAll(Example.of(vesselSearchProbe(keyword), keywordMatcher()), pageable);
+    return PageResponse.from(vessels.map(this::toResponse));
   }
 
   @Override
@@ -103,5 +117,19 @@ public class VesselServiceImpl implements VesselService {
         vessel.getTierStart(),
         vessel.getTierEnd(),
         vessel.getVersion());
+  }
+
+  private Vessel vesselSearchProbe(String keyword) {
+    Vessel probe = new Vessel();
+    probe.setVesselId(keyword);
+    probe.setDeckHold(keyword);
+    probe.setBay(keyword);
+    return probe;
+  }
+
+  private ExampleMatcher keywordMatcher() {
+    return ExampleMatcher.matchingAny()
+        .withIgnoreCase()
+        .withStringMatcher(ExampleMatcher.StringMatcher.CONTAINING);
   }
 }

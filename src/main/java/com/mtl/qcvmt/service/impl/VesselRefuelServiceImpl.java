@@ -3,10 +3,15 @@ package com.mtl.qcvmt.service.impl;
 import com.mtl.qcvmt.dto.vesselrefuel.CreateVesselRefuelRequest;
 import com.mtl.qcvmt.dto.vesselrefuel.UpdateVesselRefuelRequest;
 import com.mtl.qcvmt.dto.vesselrefuel.VesselRefuelResponse;
+import com.mtl.qcvmt.dto.common.PageResponse;
 import com.mtl.qcvmt.entity.VesselRefuel;
 import com.mtl.qcvmt.repository.VesselRefuelRepository;
 import com.mtl.qcvmt.service.VesselRefuelService;
 import java.util.List;
+import org.springframework.data.domain.Example;
+import org.springframework.data.domain.ExampleMatcher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -28,6 +33,15 @@ public class VesselRefuelServiceImpl implements VesselRefuelService {
     return vesselRefuelRepository.findAll(Sort.by(Sort.Direction.ASC, "vesselId")).stream()
         .map(this::toResponse)
         .toList();
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public PageResponse<VesselRefuelResponse> list(Pageable pageable, String keyword) {
+    Page<VesselRefuel> refuels = keyword == null || keyword.isBlank()
+        ? vesselRefuelRepository.findAll(pageable)
+        : vesselRefuelRepository.findAll(Example.of(vesselRefuelSearchProbe(keyword), keywordMatcher()), pageable);
+    return PageResponse.from(refuels.map(this::toResponse));
   }
 
   @Override
@@ -76,5 +90,18 @@ public class VesselRefuelServiceImpl implements VesselRefuelService {
         entity.getVesselId(),
         entity.getIsRefuel(),
         entity.getVersion());
+  }
+
+  private VesselRefuel vesselRefuelSearchProbe(String keyword) {
+    VesselRefuel probe = new VesselRefuel();
+    probe.setVesselId(keyword);
+    probe.setIsRefuel(keyword);
+    return probe;
+  }
+
+  private ExampleMatcher keywordMatcher() {
+    return ExampleMatcher.matchingAny()
+        .withIgnoreCase()
+        .withStringMatcher(ExampleMatcher.StringMatcher.CONTAINING);
   }
 }

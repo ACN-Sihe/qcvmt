@@ -3,10 +3,15 @@ package com.mtl.qcvmt.service.impl;
 import com.mtl.qcvmt.dto.vesselcolor.CreateVesselColorRequest;
 import com.mtl.qcvmt.dto.vesselcolor.UpdateVesselColorRequest;
 import com.mtl.qcvmt.dto.vesselcolor.VesselColorResponse;
+import com.mtl.qcvmt.dto.common.PageResponse;
 import com.mtl.qcvmt.entity.VesselColor;
 import com.mtl.qcvmt.repository.VesselColorRepository;
 import com.mtl.qcvmt.service.VesselColorService;
 import java.util.List;
+import org.springframework.data.domain.Example;
+import org.springframework.data.domain.ExampleMatcher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -28,6 +33,15 @@ public class VesselColorServiceImpl implements VesselColorService {
     return vesselColorRepository.findAll(Sort.by(Sort.Direction.ASC, "vesselId")).stream()
         .map(this::toResponse)
         .toList();
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public PageResponse<VesselColorResponse> list(Pageable pageable, String keyword) {
+    Page<VesselColor> vesselColors = keyword == null || keyword.isBlank()
+        ? vesselColorRepository.findAll(pageable)
+        : vesselColorRepository.findAll(Example.of(vesselColorSearchProbe(keyword), keywordMatcher()), pageable);
+    return PageResponse.from(vesselColors.map(this::toResponse));
   }
 
   @Override
@@ -91,5 +105,19 @@ public class VesselColorServiceImpl implements VesselColorService {
         entity.getTierStart(),
         entity.getTierEnd(),
         entity.getVersion());
+  }
+
+  private VesselColor vesselColorSearchProbe(String keyword) {
+    VesselColor probe = new VesselColor();
+    probe.setVesselId(keyword);
+    probe.setDeckHold(keyword);
+    probe.setBay(keyword);
+    return probe;
+  }
+
+  private ExampleMatcher keywordMatcher() {
+    return ExampleMatcher.matchingAny()
+        .withIgnoreCase()
+        .withStringMatcher(ExampleMatcher.StringMatcher.CONTAINING);
   }
 }
